@@ -85,3 +85,88 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid credentials.")
         data["user"] = user
         return data
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    """Serializes a user profile including data from the linked user.
+
+    Backs ``GET`` and ``PATCH`` on ``/api/profile/{pk}/``.
+    """
+
+    username = serializers.CharField(source="user.username", read_only=True)
+    first_name = serializers.CharField(
+        source="user.first_name", required=False, allow_blank=True
+    )
+    last_name = serializers.CharField(
+        source="user.last_name", required=False, allow_blank=True
+    )
+    email = serializers.EmailField(
+        source="user.email", required=False, allow_blank=True
+    )
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            "user",
+            "username",
+            "first_name",
+            "last_name",
+            "file",
+            "location",
+            "tel",
+            "description",
+            "working_hours",
+            "type",
+            "email",
+            "created_at",
+        ]
+        read_only_fields = ["user", "type", "created_at"]
+
+    def update(self, instance, validated_data):
+        """Write the nested user fields before updating the profile."""
+        user_data = validated_data.pop("user", {})
+        for attr, value in user_data.items():
+            setattr(instance.user, attr, value)
+        instance.user.save()
+        return super().update(instance, validated_data)
+
+
+class BusinessProfileSerializer(ProfileSerializer):
+    """Serializes a business profile for the list view.
+
+    Backs ``GET /api/profiles/business/``. Unlike ``ProfileSerializer``
+    it omits ``email`` and ``created_at``, which the list does not expose.
+    """
+
+    class Meta(ProfileSerializer.Meta):
+        fields = [
+            "user",
+            "username",
+            "first_name",
+            "last_name",
+            "file",
+            "location",
+            "tel",
+            "description",
+            "working_hours",
+            "type",
+        ]
+        read_only_fields = ["user", "type"]
+
+
+class CustomerProfileSerializer(ProfileSerializer):
+    """Serializes the customer profile."""
+
+    uploaded_at = serializers.DateTimeField(source="created_at", read_only=True)
+
+    class Meta(ProfileSerializer.Meta):
+        fields = [
+            "user",
+            "username",
+            "first_name",
+            "last_name",
+            "file",
+            "uploaded_at",
+            "type",
+        ]
+        read_only_fields = ["user", "type"]
