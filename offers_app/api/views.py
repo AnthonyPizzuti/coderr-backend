@@ -85,7 +85,9 @@ class OfferViewSet(viewsets.ModelViewSet):
                 min_delivery_time=Min("details__delivery_time_in_days"),
             )
         )
-        return apply_offer_filters(queryset, self.request.query_params)
+        return apply_offer_filters(queryset, self.request.query_params).order_by(
+            "-updated_at"
+        )
 
 
 class OfferDetailRetrieveView(generics.RetrieveAPIView):
