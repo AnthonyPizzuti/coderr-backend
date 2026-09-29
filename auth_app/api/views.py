@@ -17,6 +17,16 @@ from auth_app.api.serializers import (
 from auth_app.models import UserProfile
 
 
+def build_auth_response(user, token):
+    """Return the token payload expected by the frontend."""
+    return {
+        "token": token.key,
+        "username": user.username,
+        "email": user.email,
+        "user_id": user.id,
+    }
+
+
 class RegistrationView(APIView):
     """Handles user registration.
 
@@ -32,12 +42,7 @@ class RegistrationView(APIView):
             user = serializer.save()
             token, _ = Token.objects.get_or_create(user=user)
             return Response(
-                {
-                    "token": token.key,
-                    "username": user.username,
-                    "email": user.email,
-                    "user_id": user.id,
-                },
+                build_auth_response(user, token),
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -58,12 +63,7 @@ class LoginView(APIView):
             user = serializer.validated_data["user"]
             token, _ = Token.objects.get_or_create(user=user)
             return Response(
-                {
-                    "token": token.key,
-                    "username": user.username,
-                    "email": user.email,
-                    "user_id": user.id,
-                },
+                build_auth_response(user, token),
                 status=status.HTTP_200_OK,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
