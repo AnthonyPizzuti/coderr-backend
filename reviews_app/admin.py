@@ -1,3 +1,7 @@
+"""Admin registration for reviews."""
+
 from django.contrib import admin
 
-# Register your models here.
+from reviews_app.models import Review
+
+admin.site.register(Review)
