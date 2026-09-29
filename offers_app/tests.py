@@ -33,6 +33,16 @@ def detail_payload(offer_type, price):
     }
 
 
+def basic_update():
+    """Return a PATCH body that changes only the basic package."""
+    detail = detail_payload("basic", 120)
+    detail["title"] = "Basic neu"
+    detail["revisions"] = 3
+    detail["delivery_time_in_days"] = 6
+    detail["features"] = ["Logo", "Flyer"]
+    return {"title": "Logo Paket Plus", "details": [detail]}
+
+
 class OfferTests(APITestCase):
     """Tests for /api/offers/."""
 
@@ -104,26 +114,13 @@ class OfferTests(APITestCase):
         anonymous = self.client.get(f"{self.url}{offer_id}/")
         self.assertEqual(anonymous.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_owner_can_patch_a_detail_and_delete_the_offer(self):
-        """PATCH updates the basic package, DELETE removes the offer."""
+    def test_owner_can_patch_a_detail(self):
+        """PATCH updates the basic package."""
         self.login(self.anthony)
         created = self.client.post(self.url, self.offer_body(), format="json")
-        offer_id = created.data["id"]
         patched = self.client.patch(
-            f"{self.url}{offer_id}/",
-            {
-                "title": "Logo Paket Plus",
-                "details": [
-                    {
-                        "title": "Basic neu",
-                        "revisions": 3,
-                        "delivery_time_in_days": 6,
-                        "price": 120,
-                        "features": ["Logo", "Flyer"],
-                        "offer_type": "basic",
-                    }
-                ],
-            },
+            f"{self.url}{created.data['id']}/",
+            basic_update(),
             format="json",
         )
         self.assertEqual(patched.status_code, status.HTTP_200_OK)
@@ -132,5 +129,10 @@ class OfferTests(APITestCase):
             item for item in patched.data["details"] if item["offer_type"] == "basic"
         )
         self.assertEqual(basic["price"], 120)
-        deleted = self.client.delete(f"{self.url}{offer_id}/")
+
+    def test_owner_can_delete_the_offer(self):
+        """DELETE returns 204 and removes the offer."""
+        self.login(self.anthony)
+        created = self.client.post(self.url, self.offer_body(), format="json")
+        deleted = self.client.delete(f"{self.url}{created.data['id']}/")
         self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)

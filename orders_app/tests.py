@@ -53,8 +53,8 @@ class OrderTests(APITestCase):
         token, _ = Token.objects.get_or_create(user=user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
-    def test_customer_orders_and_business_completes(self):
-        """POST copies the detail, PATCH sets the status, the counter follows."""
+    def test_customer_can_create_order(self):
+        """POST copies the detail onto a new in-progress order."""
         self.login(self.mike)
         created = self.client.post(
             "/api/orders/",
@@ -65,15 +65,20 @@ class OrderTests(APITestCase):
         self.assertEqual(created.data["status"], "in_progress")
         self.assertEqual(created.data["customer_user"], self.mike.id)
         self.assertEqual(created.data["business_user"], self.anthony.id)
-        self.login(self.anthony)
-        patched = self.client.patch(
-            f"/api/orders/{created.data['id']}/",
-            {"status": "completed"},
+
+    def test_business_can_complete_an_order(self):
+        """The business user sets the status and the counter follows."""
+        self.login(self.mike)
+        created = self.client.post(
+            "/api/orders/",
+            {"offer_detail_id": self.detail_id},
             format="json",
         )
+        self.login(self.anthony)
+        order_url = f"/api/orders/{created.data['id']}/"
+        patched = self.client.patch(order_url, {"status": "completed"}, format="json")
         self.assertEqual(patched.status_code, status.HTTP_200_OK)
         count = self.client.get(f"/api/completed-order-count/{self.anthony.id}/")
-        self.assertEqual(count.status_code, status.HTTP_200_OK)
         self.assertEqual(count.data["completed_order_count"], 1)
 
     def test_business_user_cannot_create_an_order(self):

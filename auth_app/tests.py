@@ -2,11 +2,21 @@
 
 from django.contrib.auth.models import User
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from auth_app.models import UserProfile
 
-from rest_framework.authtoken.models import Token
+
+def registration_data():
+    """Return a valid customer registration payload."""
+    return {
+        "username": "newuser",
+        "email": "new@coderr.de",
+        "password": "coderr26",
+        "repeated_password": "coderr26",
+        "type": "customer",
+    }
 
 
 class RegistrationTests(APITestCase):
@@ -16,17 +26,7 @@ class RegistrationTests(APITestCase):
 
     def test_creates_customer_and_returns_token(self):
         """A valid registration returns 201 and creates a profile."""
-        response = self.client.post(
-            self.url,
-            {
-                "username": "newuser",
-                "email": "new@coderr.de",
-                "password": "coderr26",
-                "repeated_password": "coderr26",
-                "type": "customer",
-            },
-            format="json",
-        )
+        response = self.client.post(self.url, registration_data(), format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["username"], "newuser")
         self.assertIn("token", response.data)
@@ -35,17 +35,9 @@ class RegistrationTests(APITestCase):
 
     def test_rejects_mismatched_passwords(self):
         """Different password fields return 400."""
-        response = self.client.post(
-            self.url,
-            {
-                "username": "newuser",
-                "email": "new@coderr.de",
-                "password": "coderr26",
-                "repeated_password": "otherpass1",
-                "type": "customer",
-            },
-            format="json",
-        )
+        data = registration_data()
+        data["repeated_password"] = "otherpass1"
+        response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(User.objects.filter(username="newuser").exists())
 
