@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.db import models
+from offers_app.models import OfferDetail
 
 
 class Order(models.Model):
@@ -13,13 +14,6 @@ class Order(models.Model):
         IN_PROGRESS = "in_progress", "In progress"
         COMPLETED = "completed", "Completed"
         CANCELLED = "cancelled", "Cancelled"
-
-    class OfferType(models.TextChoices):
-        """Available offer package types."""
-
-        BASIC = "basic", "Basic"
-        STANDARD = "standard", "Standard"
-        PREMIUM = "premium", "Premium"
 
     customer_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -33,12 +27,12 @@ class Order(models.Model):
     )
     title = models.CharField(max_length=100)
     revisions = models.IntegerField()
-    delivery_time_in_days = models.PositiveIntegerField()
+    delivery_time_in_days = models.IntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     features = models.JSONField(default=list)
     offer_type = models.CharField(
         max_length=20,
-        choices=OfferType.choices,
+        choices=OfferDetail.TYPE_CHOICES,
     )
     status = models.CharField(
         max_length=20,
@@ -57,5 +51,4 @@ class Order(models.Model):
 
     def __str__(self):
         """Return a readable representation of the order."""
-
         return f"Order {self.pk}: {self.title}"

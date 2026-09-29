@@ -1,3 +1,7 @@
+"""Admin registration for orders."""
+
 from django.contrib import admin
 
-# Register your models here.
+from orders_app.models import Order
+
+admin.site.register(Order)
