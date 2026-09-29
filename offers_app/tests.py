@@ -103,3 +103,34 @@ class OfferTests(APITestCase):
         self.client.credentials()
         anonymous = self.client.get(f"{self.url}{offer_id}/")
         self.assertEqual(anonymous.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_owner_can_patch_a_detail_and_delete_the_offer(self):
+        """PATCH updates the basic package, DELETE removes the offer."""
+        self.login(self.anthony)
+        created = self.client.post(self.url, self.offer_body(), format="json")
+        offer_id = created.data["id"]
+        patched = self.client.patch(
+            f"{self.url}{offer_id}/",
+            {
+                "title": "Logo Paket Plus",
+                "details": [
+                    {
+                        "title": "Basic neu",
+                        "revisions": 3,
+                        "delivery_time_in_days": 6,
+                        "price": 120,
+                        "features": ["Logo", "Flyer"],
+                        "offer_type": "basic",
+                    }
+                ],
+            },
+            format="json",
+        )
+        self.assertEqual(patched.status_code, status.HTTP_200_OK)
+        self.assertEqual(patched.data["title"], "Logo Paket Plus")
+        basic = next(
+            item for item in patched.data["details"] if item["offer_type"] == "basic"
+        )
+        self.assertEqual(basic["price"], 120)
+        deleted = self.client.delete(f"{self.url}{offer_id}/")
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
