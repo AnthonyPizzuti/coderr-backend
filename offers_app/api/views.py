@@ -2,6 +2,7 @@
 
 from django.db.models import Min
 from rest_framework import generics, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -17,17 +18,25 @@ from offers_app.api.serializers import (
 from offers_app.models import Offer, OfferDetail
 
 
+def as_number(value):
+    """Return a query value as a number, or raise 400."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        raise ValidationError("A valid number is required.")
+
+
 def apply_offer_filters(queryset, params):
     """Apply creator, price and delivery-time query filters."""
     creator_id = params.get("creator_id")
     if creator_id:
-        queryset = queryset.filter(user_id=creator_id)
+        queryset = queryset.filter(user_id=as_number(creator_id))
     min_price = params.get("min_price")
     if min_price:
-        queryset = queryset.filter(min_price__gte=min_price)
+        queryset = queryset.filter(min_price__gte=as_number(min_price))
     max_delivery_time = params.get("max_delivery_time")
     if max_delivery_time:
-        queryset = queryset.filter(min_delivery_time__lte=max_delivery_time)
+        queryset = queryset.filter(min_delivery_time__lte=as_number(max_delivery_time))
     return queryset
 
 

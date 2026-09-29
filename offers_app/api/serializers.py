@@ -111,11 +111,26 @@ def _create_details(offer, details_data):
 def _update_details(offer, details_data):
     """Patch existing details, identified by ``offer_type``."""
     for item in details_data:
-        offer_type = item.pop("offer_type")
-        detail = offer.details.get(offer_type=offer_type)
+        offer_type = item.pop("offer_type", None)
+        if not offer_type:
+            raise serializers.ValidationError("Each detail needs an offer_type.")
+        detail = offer.details.filter(offer_type=offer_type).first()
+        if detail is None:
+            raise serializers.ValidationError("Unknown offer_type.")
         for attr, value in item.items():
             setattr(detail, attr, value)
         detail.save()
+
+
+def collect_detail_types(details):
+    """Return the offer types, rejecting entries without one."""
+    types = []
+    for item in details:
+        offer_type = item.get("offer_type")
+        if not offer_type:
+            raise serializers.ValidationError("Each detail needs an offer_type.")
+        types.append(offer_type)
+    return types
 
 
 class OfferWriteSerializer(serializers.ModelSerializer):
@@ -132,7 +147,7 @@ class OfferWriteSerializer(serializers.ModelSerializer):
 
     def validate_details(self, value):
         """Require three unique types on create; unique types on update."""
-        types = [item["offer_type"] for item in value]
+        types = collect_detail_types(value)
         valid = {OfferDetail.BASIC, OfferDetail.STANDARD, OfferDetail.PREMIUM}
         if len(types) != len(set(types)):
             raise serializers.ValidationError("Each offer_type may appear only once.")
